@@ -1,0 +1,5 @@
+{
+  "name": "Bharatvayu",
+  "description": "AI-powered Air Quality Index (AQI) Prediction and Health Advisory Dashboard.",
+  "requestFramePermissions": ["geolocation"]
+}
