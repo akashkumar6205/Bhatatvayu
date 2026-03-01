@@ -46,15 +46,8 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<'home' | 'guidelines' | 'reports' | 'indiamap' | 'about' | 'profile'>('home');
 
   useEffect(() => {
-    const saved = localStorage.getItem('bharatvayu_profile');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.city) {
-        setLocation(parsed.city);
-        setSearchQuery(parsed.city);
-        fetchData(34.0522 + Math.random(), -118.2437 + Math.random(), parsed.city);
-      }
-    }
+    // We no longer auto-load the previous search data on mount
+    // to ensure only the search bar is shown initially.
   }, []);
 
   const handleHomeClick = () => {
@@ -202,7 +195,7 @@ export default function Dashboard() {
               onClick={() => setCurrentView('indiamap')} 
               className={`${currentView === 'indiamap' ? 'text-indigo-600 font-semibold' : 'hover:text-indigo-600 transition-colors'}`}
             >
-              India Map
+              World Map
             </button>
             <button 
               onClick={() => setCurrentView('guidelines')} 
@@ -269,7 +262,7 @@ export default function Dashboard() {
                 onClick={() => { setCurrentView('indiamap'); setIsMobileMenuOpen(false); }} 
                 className={`text-left ${currentView === 'indiamap' ? 'text-indigo-600 font-semibold' : 'hover:text-indigo-600 transition-colors'}`}
               >
-                India Map
+                World Map
               </button>
               <button 
                 onClick={() => { setCurrentView('guidelines'); setIsMobileMenuOpen(false); }} 

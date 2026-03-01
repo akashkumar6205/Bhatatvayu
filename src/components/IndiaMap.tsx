@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { MapPin, Wind, Maximize } from 'lucide-react';
 
 interface CityAQI {
@@ -14,12 +13,13 @@ function MapController({ center, zoom }: { center: [number, number], zoom: numbe
   const map = useMap();
   useEffect(() => {
     map.flyTo(center, zoom, { duration: 1.5 });
-  }, [center, zoom, map]);
+  }, [center[0], center[1], zoom, map]);
   return null;
 }
 
-// Major Indian cities and their approximate coordinates (Lat, Lon)
+// Major Indian and World cities and their approximate coordinates (Lat, Lon)
 const cities: CityAQI[] = [
+  // Indian Cities
   { name: "Delhi", coordinates: [28.6139, 77.2090], aqi: 0 },
   { name: "Mumbai", coordinates: [19.0760, 72.8777], aqi: 0 },
   { name: "Bengaluru", coordinates: [12.9716, 77.5946], aqi: 0 },
@@ -58,6 +58,23 @@ const cities: CityAQI[] = [
   { name: "Ranchi", coordinates: [23.3441, 85.3096], aqi: 0 },
   { name: "Raipur", coordinates: [21.2514, 81.6296], aqi: 0 },
   { name: "Shillong", coordinates: [25.5788, 91.8933], aqi: 0 },
+  
+  // World Cities
+  { name: "New York", coordinates: [40.7128, -74.0060], aqi: 0 },
+  { name: "London", coordinates: [51.5074, -0.1278], aqi: 0 },
+  { name: "Tokyo", coordinates: [35.6762, 139.6503], aqi: 0 },
+  { name: "Beijing", coordinates: [39.9042, 116.4074], aqi: 0 },
+  { name: "Sydney", coordinates: [-33.8688, 151.2093], aqi: 0 },
+  { name: "Paris", coordinates: [48.8566, 2.3522], aqi: 0 },
+  { name: "Moscow", coordinates: [55.7558, 37.6173], aqi: 0 },
+  { name: "Dubai", coordinates: [25.2048, 55.2708], aqi: 0 },
+  { name: "Singapore", coordinates: [1.3521, 103.8198], aqi: 0 },
+  { name: "Los Angeles", coordinates: [34.0522, -118.2437], aqi: 0 },
+  { name: "Seoul", coordinates: [37.5665, 126.9780], aqi: 0 },
+  { name: "Cairo", coordinates: [30.0444, 31.2357], aqi: 0 },
+  { name: "Rio de Janeiro", coordinates: [-22.9068, -43.1729], aqi: 0 },
+  { name: "Johannesburg", coordinates: [-26.2041, 28.0473], aqi: 0 },
+  { name: "Toronto", coordinates: [43.6510, -79.3470], aqi: 0 },
 ];
 
 export default function IndiaMap() {
@@ -65,6 +82,50 @@ export default function IndiaMap() {
   const [loading, setLoading] = useState(true);
   const [mapCenter, setMapCenter] = useState<[number, number]>([22.5937, 78.9629]);
   const [mapZoom, setMapZoom] = useState(5);
+
+  const getAQIColor = (aqi: number) => {
+    if (aqi <= 50) return '#22c55e'; // green-500
+    if (aqi <= 100) return '#eab308'; // yellow-500
+    if (aqi <= 150) return '#f97316'; // orange-500
+    if (aqi <= 200) return '#ef4444'; // red-500
+    if (aqi <= 300) return '#a855f7'; // purple-500
+    return '#881337'; // rose-900
+  };
+
+  const getAQIStatus = (aqi: number) => {
+    if (aqi <= 50) return 'Good';
+    if (aqi <= 100) return 'Moderate';
+    if (aqi <= 150) return 'Unhealthy (Sensitive)';
+    if (aqi <= 200) return 'Unhealthy';
+    if (aqi <= 300) return 'Very Unhealthy';
+    return 'Hazardous';
+  };
+
+  // Memoize icons to prevent recreation on every render
+  const icons = useMemo(() => {
+    const iconMap = new Map<string, L.DivIcon>();
+    cityData.forEach(city => {
+      const color = getAQIColor(city.aqi);
+      const icon = L.divIcon({
+        className: 'custom-leaflet-icon',
+        html: `
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+            <div style="background-color: ${color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-size: 14px;">
+              ${city.aqi}
+            </div>
+            <div style="background-color: ${color}; width: 2px; height: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>
+            <div style="text-align: center; margin-top: 2px; font-weight: 700; font-size: 12px; color: #1e293b; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 2px 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, -2px 0 0 #fff; white-space: nowrap;">
+              ${city.name}
+            </div>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+      iconMap.set(city.name, icon);
+    });
+    return iconMap;
+  }, [cityData]);
 
   const handleCityClick = (city: CityAQI) => {
     setMapCenter(city.coordinates);
@@ -84,10 +145,10 @@ export default function IndiaMap() {
       const updatedCities = cities.map(city => {
         let baseAqi = 100;
         
-        const severeCities = ['Delhi', 'Patna', 'Lucknow', 'Kanpur', 'Agra', 'Ludhiana', 'Varanasi', 'Prayagraj'];
-        const poorCities = ['Mumbai', 'Kolkata', 'Ahmedabad', 'Surat', 'Vadodara', 'Indore', 'Nagpur', 'Raipur', 'Jaipur'];
-        const moderateCities = ['Bengaluru', 'Chennai', 'Hyderabad', 'Pune', 'Visakhapatnam', 'Vijayawada', 'Bhubaneswar', 'Ranchi', 'Bhopal', 'Nashik'];
-        const goodCities = ['Kochi', 'Guwahati', 'Chandigarh', 'Thiruvananthapuram', 'Mysuru', 'Coimbatore', 'Shimla', 'Srinagar', 'Dehradun', 'Shillong', 'Amritsar'];
+        const severeCities = ['Delhi', 'Patna', 'Lucknow', 'Kanpur', 'Agra', 'Ludhiana', 'Varanasi', 'Prayagraj', 'Beijing', 'Cairo'];
+        const poorCities = ['Mumbai', 'Kolkata', 'Ahmedabad', 'Surat', 'Vadodara', 'Indore', 'Nagpur', 'Raipur', 'Jaipur', 'Dubai', 'Seoul', 'Los Angeles'];
+        const moderateCities = ['Bengaluru', 'Chennai', 'Hyderabad', 'Pune', 'Visakhapatnam', 'Vijayawada', 'Bhubaneswar', 'Ranchi', 'Bhopal', 'Nashik', 'New York', 'Paris', 'Moscow', 'Johannesburg', 'Rio de Janeiro'];
+        const goodCities = ['Kochi', 'Guwahati', 'Chandigarh', 'Thiruvananthapuram', 'Mysuru', 'Coimbatore', 'Shimla', 'Srinagar', 'Dehradun', 'Shillong', 'Amritsar', 'London', 'Tokyo', 'Sydney', 'Singapore', 'Toronto'];
 
         if (severeCities.includes(city.name)) baseAqi = 280;
         else if (poorCities.includes(city.name)) baseAqi = 160;
@@ -111,44 +172,6 @@ export default function IndiaMap() {
     fetchCityData();
   }, []);
 
-  const getAQIColor = (aqi: number) => {
-    if (aqi <= 50) return '#22c55e'; // green-500
-    if (aqi <= 100) return '#eab308'; // yellow-500
-    if (aqi <= 150) return '#f97316'; // orange-500
-    if (aqi <= 200) return '#ef4444'; // red-500
-    if (aqi <= 300) return '#a855f7'; // purple-500
-    return '#881337'; // rose-900
-  };
-
-  const getAQIStatus = (aqi: number) => {
-    if (aqi <= 50) return 'Good';
-    if (aqi <= 100) return 'Moderate';
-    if (aqi <= 150) return 'Unhealthy (Sensitive)';
-    if (aqi <= 200) return 'Unhealthy';
-    if (aqi <= 300) return 'Very Unhealthy';
-    return 'Hazardous';
-  };
-
-  const createCustomIcon = (aqi: number, name: string) => {
-    const color = getAQIColor(aqi);
-    return L.divIcon({
-      className: 'custom-leaflet-icon',
-      html: `
-        <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
-          <div style="background-color: ${color}; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-size: 14px;">
-            ${aqi}
-          </div>
-          <div style="background-color: ${color}; width: 2px; height: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>
-          <div style="text-align: center; margin-top: 2px; font-weight: 700; font-size: 12px; color: #1e293b; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 2px 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, -2px 0 0 #fff; white-space: nowrap;">
-            ${name}
-          </div>
-        </div>
-      `,
-      iconSize: [0, 0],
-      iconAnchor: [0, 0],
-    });
-  };
-
   return (
     <div className="h-[calc(100dvh-64px)] w-full overflow-hidden flex flex-col p-2 sm:p-4 bg-slate-50">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
@@ -158,10 +181,10 @@ export default function IndiaMap() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">India AQI Map</h1>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">World AQI Map</h1>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 hidden sm:block">
-              Interactive real-time Air Quality Index across major Indian cities.
+              Interactive real-time Air Quality Index across major Indian and World cities.
             </p>
           </div>
         </div>
@@ -186,10 +209,11 @@ export default function IndiaMap() {
                   Reset View
                 </button>
                 <MapContainer 
-                  center={mapCenter} 
-                  zoom={mapZoom} 
+                  center={[22.5937, 78.9629]} 
+                  zoom={5} 
                   scrollWheelZoom={true}
-                  className="w-full h-full z-0"
+                  className="w-full h-full min-h-[400px]"
+                  style={{ height: '100%', width: '100%', minHeight: '400px', zIndex: 1 }}
                 >
                   <MapController center={mapCenter} zoom={mapZoom} />
                   <TileLayer
@@ -200,7 +224,7 @@ export default function IndiaMap() {
                     <Marker 
                       key={city.name} 
                       position={city.coordinates}
-                      icon={createCustomIcon(city.aqi, city.name)}
+                      icon={icons.get(city.name)}
                       eventHandlers={{
                         click: () => handleCityClick(city),
                       }}

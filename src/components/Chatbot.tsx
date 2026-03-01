@@ -29,17 +29,16 @@ export default function Chatbot({ location, aqi }: ChatbotProps) {
   useEffect(() => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const context = location && aqi ? ` The user is currently viewing data for ${location} where the AQI is ${aqi}.` : '';
       chatRef.current = ai.chats.create({
         model: "gemini-3-flash-preview",
         config: {
-          systemInstruction: `You are the Bharatvayu AI Assistant. Provide accurate, helpful information about air pollution, health impacts, and the Bharatvayu platform.${context} CRITICAL RULE: You MUST reply in exactly ONE single, concise sentence. Never use bullet points, multiple paragraphs, or long explanations.`,
+          systemInstruction: `You are the Bharatvayu AI Assistant. Provide accurate, helpful information about air pollution, health impacts, and the Bharatvayu platform. CRITICAL RULE: You MUST reply in exactly ONE single, concise sentence. Never use bullet points, multiple paragraphs, or long explanations.`,
         }
       });
     } catch (error) {
       console.error("Failed to initialize Gemini chat:", error);
     }
-  }, [location, aqi]);
+  }, []);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -59,7 +58,9 @@ export default function Chatbot({ location, aqi }: ChatbotProps) {
     setIsLoading(true);
 
     try {
-      const response = await chatRef.current.sendMessage({ message: userMessage });
+      const context = location && aqi ? ` [Context: User is viewing data for ${location} with AQI ${aqi}]` : '';
+      const messageWithContext = userMessage + context;
+      const response = await chatRef.current.sendMessage({ message: messageWithContext });
       setMessages(prev => [...prev, { role: 'model', text: response.text }]);
     } catch (error) {
       console.error("Chat error:", error);
